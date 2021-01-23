@@ -12,6 +12,7 @@ import androidx.annotation.RequiresApi;
 import org.agentspace.blindsee.cnn.CNNExtractorService;
 import org.agentspace.blindsee.cnn.CNNDetection;
 import org.agentspace.blindsee.cnn.impl.CNNExtractorServiceImpl;
+import org.agentspace.android.Speecher;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraActivity;
@@ -32,18 +33,20 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
+import org.agentspace.lang.Sk;
 
 public class MainActivity extends CameraActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
     private static final String TAG = MainActivity.class.getName();
 
-    private static final String IMAGENET_CLASSES = "imagenet_classes.txt";
+    private static final String IMAGENET_CLASSES = "imagenet_classes_sk.txt";
     private static final String MODEL_FILE = "pytorch_mobilenet.onnx";
 
     private CameraBridgeViewBase mOpenCvCameraView;
     private Net opencvNet;
 
     private CNNExtractorService cnnService;
+    private Speecher speecher;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -75,6 +78,9 @@ public class MainActivity extends CameraActivity implements CameraBridgeViewBase
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_main);
+        
+        // initialize Text to Speech
+        speecher = new Speecher(this,"SK"); // "SK" or ""
 
         // initialize implementation of CNNExtractorService
         this.cnnService = new CNNExtractorServiceImpl();
@@ -107,10 +113,14 @@ public class MainActivity extends CameraActivity implements CameraBridgeViewBase
         String classesPath = getPath(IMAGENET_CLASSES, this);
         CNNDetection detection = cnnService.getPredictedLabel(frame, opencvNet, classesPath);
 
-        if (detection.confidence > 10.0) {
-            // place the predicted label on the image
-            Imgproc.putText(frame, detection.label, new Point(200, 100), Imgproc.FONT_HERSHEY_SIMPLEX, 2, new Scalar(255, 121, 0), 3);
-            Imgproc.putText(frame, "" + detection.confidence, new Point(200, 200), Imgproc.FONT_HERSHEY_SIMPLEX, 2, new Scalar(255, 121, 0), 3);
+        // place the predicted label on the image
+        String label = Sk.utf82usa(detection.label);
+        Imgproc.putText(frame, label, new Point(100, 100), Imgproc.FONT_HERSHEY_SIMPLEX, 2, new Scalar(255, 121, 0), 3);
+        Imgproc.putText(frame, String.format("%.5f", detection.confidence), new Point(100, 200), Imgproc.FONT_HERSHEY_SIMPLEX, 2, new Scalar(255, 121, 0), 3);
+
+        if (detection.confidence > 8.0) {
+            // speak the seen label
+            if (!speecher.isSpeaking()) speecher.speak(detection.label);
         }
         
         return frame;

@@ -1,6 +1,9 @@
 package org.agentspace.blindsee.cnn.impl;
 
+import android.os.Build;
 import android.util.Log;
+
+import androidx.annotation.RequiresApi;
 
 import org.agentspace.blindsee.cnn.CNNExtractorService;
 import org.agentspace.blindsee.cnn.CNNDetection;
@@ -18,6 +21,7 @@ import org.opencv.imgproc.Imgproc;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 
@@ -32,7 +36,6 @@ public class CNNExtractorServiceImpl implements CNNExtractorService {
     private static final Scalar STD = new Scalar(0.229, 0.224, 0.225);
 
     private String TAG;
-
 
     private ArrayList<String> getImgLabels(String imgLabelsFilePath) {
         ArrayList<String> imgLabels = new ArrayList();
@@ -93,6 +96,8 @@ public class CNNExtractorServiceImpl implements CNNExtractorService {
     }
 
     private CNNDetection getPredictedClass(Mat classificationResult, String classesPath) {
+        final int[] indices = { 844, 508, 590, 591, 620, 673, 681, 664, 904, 905, 753, 799, 818, 861, 898, 896, 530, 531, 826, 836, 837, 953, 954, 950, 951, 952, 937, 879, 504, 440, 441, 434, 532, 736, 846, 423, 559, 765, 968, 899 };
+
         ArrayList<String> imgLabels = getImgLabels(classesPath);
 
         if (imgLabels.isEmpty()) {
@@ -100,11 +105,20 @@ public class CNNExtractorServiceImpl implements CNNExtractorService {
         }
 
         // obtain max prediction result
-        Core.MinMaxLocResult mm = Core.minMaxLoc(classificationResult);
-        int x = (int) mm.maxLoc.x;
-        int y = (int) mm.maxLoc.y;
-        double confidence = classificationResult.get(y, x)[0];
-        return new CNNDetection(imgLabels.get(x),confidence);
+        //Core.MinMaxLocResult mm = Core.minMaxLoc(classificationResult);
+        //int x = (int) mm.maxLoc.x;
+        //int y = (int) mm.maxLoc.y;
+
+        // obtain max prediction from limited set of categories
+        int x = 0, y = 0;
+        double confidence = 0.0;
+        for (int i=0; i<indices.length; i++) {
+            if (classificationResult.get(y, indices[i])[0] > confidence){
+                x = indices[i];
+                confidence = classificationResult.get(y, x)[0];
+            }
+        }
+        return new CNNDetection(imgLabels.get(x), confidence);
     }
 
     @Override
