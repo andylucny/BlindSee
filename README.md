@@ -1,2 +1,2 @@
 # BlindSee
-deep learning powered mobile application for blind people
+deep learning powered mobile application (theoretically) for blind people (in practice, this just a toy).
